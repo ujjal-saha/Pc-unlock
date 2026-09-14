@@ -72,8 +72,8 @@ For most users, the installation experience is intentionally simple.
 ### Regular user setup
 
 1. Go to the GitHub Releases tab.
-2. Download `PhoneUnlock_Setup.exe`.
-3. Run the Setup Wizard.
+2. Download `PhoneUnlock_Setup.exe` `PhoneUnlock.apk`.
+3. Run the Setup Wizard and install PhoneUnlock in phone .
 4. Grant the required UAC elevation when prompted.
 5. Let the installer complete its setup steps.
 6. The wizard will automatically:
