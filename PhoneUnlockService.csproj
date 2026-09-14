@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>PhoneUnlockService</RootNamespace>
+    <UserSecretsId>phoneunlockservice-dev</UserSecretsId>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- This service must run as a Windows Service (LocalSystem or a
+         dedicated service account with "Log on as a service" rights),
+         never as a normal interactive console app, because it holds the
+         DPAPI-encrypted Windows password and must survive logoff. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+    <!-- DPAPI wrapper (ProtectedData) - the actual crypto call is a thin
+         P/Invoke around CryptProtectData/CryptUnprotectData on Windows. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <!-- Needed to lock the named pipe's ACL down to SYSTEM + Administrators
+         (LogonUI, which hosts the Credential Provider, runs as SYSTEM). -->
+    <PackageReference Include="System.IO.Pipes.AccessControl" Version="6.0.0-preview.5.21301.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
