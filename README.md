@@ -128,6 +128,173 @@ This repository includes the key components needed for the Windows and relay sid
 - `PhoneUnlockRelay` — the Cloudflare relay and worker implementation
 - `OfficialMicrosoftProvider` — the custom C++ Credential Provider based on the Microsoft sample code
 
+
+---
+
+## Troubleshooting / Common Problems
+
+Below are the most common issues encountered while developing and testing this project. These problems are practical, real-world problems that can appear during installation, pairing, or lock-screen integration.
+
+### 1. Windows service fails to start or register
+
+**Symptoms**
+- Service is not running after install
+- Start-up fails with access or dependency errors
+- Setup wizard completes but the service is not active
+
+**What to check**
+- Run the installer as Administrator
+- Confirm the service is installed correctly and registered in Windows Services
+- Check that the user running the service has permission to access the required files and registry keys
+- Verify that the service is not already running twice
+
+**Typical fix**
+- Re-run the setup wizard with UAC elevation enabled
+- Restart the machine if the service registration is stale
+- Remove duplicate service instances before re-registering
+
+### 2. Credential Provider does not load or shows no effect on the lock screen
+
+**Symptoms**
+- Provider is present in the build output, but does not appear on the lock screen
+- No unlock UI is displayed after login is requested
+- The system does not recognize the provider registration
+
+**What to check**
+- Confirm the provider is registered under the correct COM GUID in the registry
+- Verify the DLL is in the correct Windows system folder
+- Ensure the provider was built for the correct architecture (`x64`)
+- Confirm there are no broken registry entries from an earlier install
+
+**Typical fix**
+- Re-register the provider cleanly
+- Remove stale registry entries before reinstalling
+- Rebuild the DLL in `Release` + `x64` mode to match the target OS
+
+### 3. Lock screen integration fails after a rebuild
+
+**Symptoms**
+- The provider builds successfully, but lock-screen behavior is inconsistent
+- The provider seems to compile but the login UI does not respond correctly
+- The provider works in one environment but not another
+
+**What to check**
+- Confirm the provider binary matches the system architecture
+- Check whether the COM registration was generated for the correct build config
+- Validate that there are no stale `dll` or registry leftovers from earlier test runs
+- Make sure you are not mixing debug and release artifacts during testing
+
+**Typical fix**
+- Build from a clean state
+- Remove old registration entries
+- Copy the correct release binary into the system folder
+- Reboot and retest
+
+### 4. Relay authentication mismatch / pairing fails with 401 responses
+
+**Symptoms**
+- Pairing fails immediately
+- WebSocket or relay connection returns a `401 Unauthorized`
+- The configured PC identity does not match the token or persisted pairing record
+
+**What to check**
+- Ensure the same canonical PC ID is used consistently across the service, pairing store, relay registration, and WebSocket connection
+- Check the relay token registration against the currently persisted PC identity
+- Look for stale values from an earlier debug environment or a previous test VM
+
+**Typical fix**
+- Remove stale or mismatched pairing data
+- Re-register the PC identity in the relay
+- Ensure there is only one active service instance using the same identity
+
+### 5. Named pipe communication breaks or hangs
+
+**Symptoms**
+- The service and provider cannot communicate
+- Unlock requests stall or stop mid-flight
+- The provider appears to send a message but nothing arrives
+
+**What to check**
+- Verify that the named pipe path is correct
+- Confirm there is no duplicate service instance competing for the same pipe
+- Check for ACL issues and broken pipe errors
+- Review Windows event logs and local logs for communication failures
+
+**Typical fix**
+- Restart the service
+- Ensure only one service instance is active
+- Recreate the named pipe setup correctly
+- Make sure both sides are using the same pipe identifier and message contract
+
+### 6. Android app does not receive notifications reliably
+
+**Symptoms**
+- Unlock requests are delayed until the app is manually opened
+- Push delivery is low-priority or not waking the app in time
+- The phone appears offline even when the relay is active
+
+**What to check**
+- Confirm FCM payload priority is set correctly
+- Ensure the app is not blocked by battery optimization
+- Verify that Android notification permissions are granted
+- Check whether the app is being background-killed by the OEM battery policy
+
+**Typical fix**
+- Request the battery optimization exemption from the app
+- Use a high-priority FCM payload for wake-up behavior
+- Keep the relay and Android flow validated under actual device conditions
+
+### 7. Project build fails because of stale generated files or duplicate outputs
+
+**Symptoms**
+- Build output appears inconsistent
+- Source compiles but previous binary artifacts keep interfering
+- Debug and release outputs look mismatched
+
+**What to check**
+- Clear stale build artifacts and intermediate objects
+- Verify you are not overwriting the active build output while the service is still running
+- Check whether multiple processes are started against the same target build directory
+
+**Typical fix**
+- Delete old `bin` and `obj` artifacts before a fresh rebuild
+- Stop duplicate service processes before re-testing
+- Rebuild from a clean configuration
+
+### 8. App settings or pairing data are stale after a repeat install
+
+**Symptoms**
+- The app behaves as though it is using an old PC identity
+- The UI shows a previous pairing state or outdated connection details
+- Pairing fails even after reinstalling components
+
+**What to check**
+- Remove stale persisted pairing files and reconnect the PC
+- Check for multiple config locations or older registry states
+- Confirm a single canonical PC ID is being used for the pairing lifecycle
+
+**Typical fix**
+- Remove old stored identity data
+- Recreate the pairing flow from a clean state
+- Ensure the current setup is using the correct generated ID
+
+### 9. GitHub upload or repo packaging issues
+
+**Symptoms**
+- Upload fails during repository preparation
+- Large binary caches or generated directories consume the project size budget
+- The project cannot be published cleanly
+
+**What to check**
+- Remove large build caches and temporary outputs
+- Keep source and debug artifacts only where needed
+- Avoid committing full dependency folders or generated logs
+
+**Typical fix**
+- Keep only the essential project folders and required debug binaries
+- Exclude `node_modules`, cache folders, and temporary runtime logs
+- Use a clean, curated open-source structure
+
 ---
 
 ## Credits
