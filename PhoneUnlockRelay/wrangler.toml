@@ -1,0 +1,42 @@
+name = "phoneunlock-relay"
+main = "src/index.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+
+# ---------------------------------------------------------------------
+# Durable Object: one instance per paired PC (idFromName(pcId)), holding
+# the live "pc" websocket, any live "phone" websockets, and small durable
+# state (hashed auth token, paired-device FCM tokens). Uses the
+# WebSocket Hibernation API so idle connections don't burn duration
+# billing on the Free plan.
+# ---------------------------------------------------------------------
+[[durable_objects.bindings]]
+name = "PC_RELAY"
+class_name = "PcRelay"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PcRelay"]
+
+# ---------------------------------------------------------------------
+# KV: short-lived pairing-code -> pcId lookups only (5 min TTL). Nothing
+# else lives here - all other durable state is per-PC, inside that PC's
+# own Durable Object, per the handoff note's "no database needed" design.
+# Create with: wrangler kv namespace create PAIRING_KV
+# ---------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "PAIRING_KV"
+id = "5f22f80cd7f14b638a3a913c3f231dc3"
+
+# ---------------------------------------------------------------------
+# Secrets (set with `wrangler secret put <NAME>`, never committed here):
+#   ADMIN_TOKEN        - required to register a new PC (POST /pc/register).
+#                         Only you should know this; treat it like a
+#                         root password for the relay.
+#   FCM_SERVICE_ACCOUNT - full JSON of a Firebase service account key,
+#                         as a single-line string, used to wake a phone
+#                         via push when it isn't currently connected.
+#                         Optional: unlock still works without it as
+#                         long as the phone app happens to be open /
+#                         already connected.
+# ---------------------------------------------------------------------
