@@ -126,21 +126,7 @@ This repository includes the key components needed for the Windows and relay sid
 - `PhoneUnlockRelay` — the Cloudflare relay and worker implementation
 - `OfficialMicrosoftProvider` — the custom C++ Credential Provider based on the Microsoft sample code
 
-### Files to update on GitHub
 
-When publishing the latest Windows pairing fix, upload the source files below. Keep the repository source-only and do not upload `bin`, `obj`, local `publish` folders, or the temporary `compile` staging directory.
-
-- `PhoneUnlockSetup/Program.cs` — Setup UI named-pipe client, timeout, complete-message reading, and user-facing pairing errors
-- `PhoneUnlockService/Program.cs` — registers the pairing pipe hosted service
-- `PhoneUnlockService/Pipe/PairingPipeHost.cs` — named-pipe listener for `PhoneUnlockPairingPipe` and `BEGIN_PAIRING`
-- `PhoneUnlockService/Pipe/PipeServerHost.cs` — existing Credential Provider unlock pipe
-- `PhoneUnlockService/Pipe/PipeProtocol.cs` — existing unlock pipe message protocol
-- `PhoneUnlockService/Notifications/DesktopUnlockNotifier.cs` — desktop confirmation after a successful unlock
-- `PhoneUnlockService/PhoneUnlockService.csproj` — service dependencies and build configuration
-- `PhoneUnlockSetup/PhoneUnlockSetup.csproj` — Setup UI project reference and Windows Forms configuration
-- `PhoneUnlockService/appsettings.json` — relay configuration template, without private secrets
-
-The current export stores the service under `PhoneUnlockService part1`. Rename that folder to `PhoneUnlockService` before uploading, or preserve the folder name consistently in the project references. Copy the newer `PairingPipeHost.cs` and `Notifications/DesktopUnlockNotifier.cs` files into that service source tree before publishing.
 
 ---
 
