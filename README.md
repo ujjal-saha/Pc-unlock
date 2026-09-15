@@ -1,5 +1,3 @@
-# Pc-unlock
-A zero-click Windows PC unlocker. Uses a custom C++ Credential Provider, a C# background service, and a Cloudflare relay to securely unlock your PC via Android push notifications. Includes a full setup wizard!
 # PC Unlocker
 
 <p align="center">
@@ -72,8 +70,8 @@ For most users, the installation experience is intentionally simple.
 ### Regular user setup
 
 1. Go to the GitHub Releases tab.
-2. Download `PhoneUnlock_Setup.exe` `PhoneUnlock.apk`.
-3. Run the Setup Wizard and install PhoneUnlock in phone .
+2. Download `PhoneUnlock_Setup.exe`.
+3. Run the Setup Wizard.
 4. Grant the required UAC elevation when prompted.
 5. Let the installer complete its setup steps.
 6. The wizard will automatically:
@@ -128,6 +126,21 @@ This repository includes the key components needed for the Windows and relay sid
 - `PhoneUnlockRelay` — the Cloudflare relay and worker implementation
 - `OfficialMicrosoftProvider` — the custom C++ Credential Provider based on the Microsoft sample code
 
+### Files to update on GitHub
+
+When publishing the latest Windows pairing fix, upload the source files below. Keep the repository source-only and do not upload `bin`, `obj`, local `publish` folders, or the temporary `compile` staging directory.
+
+- `PhoneUnlockSetup/Program.cs` — Setup UI named-pipe client, timeout, complete-message reading, and user-facing pairing errors
+- `PhoneUnlockService/Program.cs` — registers the pairing pipe hosted service
+- `PhoneUnlockService/Pipe/PairingPipeHost.cs` — named-pipe listener for `PhoneUnlockPairingPipe` and `BEGIN_PAIRING`
+- `PhoneUnlockService/Pipe/PipeServerHost.cs` — existing Credential Provider unlock pipe
+- `PhoneUnlockService/Pipe/PipeProtocol.cs` — existing unlock pipe message protocol
+- `PhoneUnlockService/Notifications/DesktopUnlockNotifier.cs` — desktop confirmation after a successful unlock
+- `PhoneUnlockService/PhoneUnlockService.csproj` — service dependencies and build configuration
+- `PhoneUnlockSetup/PhoneUnlockSetup.csproj` — Setup UI project reference and Windows Forms configuration
+- `PhoneUnlockService/appsettings.json` — relay configuration template, without private secrets
+
+The current export stores the service under `PhoneUnlockService part1`. Rename that folder to `PhoneUnlockService` before uploading, or preserve the folder name consistently in the project references. Copy the newer `PairingPipeHost.cs` and `Notifications/DesktopUnlockNotifier.cs` files into that service source tree before publishing.
 
 ---
 
@@ -294,6 +307,62 @@ Below are the most common issues encountered while developing and testing this p
 - Keep only the essential project folders and required debug binaries
 - Exclude `node_modules`, cache folders, and temporary runtime logs
 - Use a clean, curated open-source structure
+
+### 10. Setup UI reports `ReadMode is not of PipeTransmissionMode.Message`
+
+**Cause**
+- The Setup UI calls `IsMessageComplete` while the named-pipe client is still using byte read mode.
+
+**Fix**
+- Set `pipe.ReadMode = PipeTransmissionMode.Message` immediately after `ConnectAsync`.
+- Rebuild `PhoneUnlockSetup` in `Release` mode and replace the installed Setup executable and DLLs.
+
+### 11. Pairing code remains unavailable even though the service is running
+
+**What to check**
+- Confirm the service exposes `PhoneUnlockPairingPipe`, not only the Credential Provider's `PhoneUnlockPipe`.
+- Confirm the installed Setup binary and the service are from the same Release build.
+- Check whether the service can connect to the relay; a running Windows service does not guarantee an active relay connection.
+
+**Typical fix**
+- Restart or reinstall `PhoneUnlockService` after replacing its binaries.
+- Test the pairing pipe with the exact `BEGIN_PAIRING` command.
+- Return an explicit `PAIRING_ERROR` response from the service instead of leaving the Setup client waiting for a timeout.
+
+### 12. Setup and service binaries are from different builds
+
+**Symptoms**
+- The UI still shows an old generic error after the source was fixed.
+- The Setup client expects a pairing pipe or response format that the installed service does not implement.
+
+**Typical fix**
+- Rebuild both projects in `Release` mode.
+- Copy the complete Setup output to the installer Setup folder and the complete Service output to the installer Service folder.
+- Remove stale files before copying and restart the installed service as Administrator.
+- Verify the staged files with SHA-256 hashes before building the installer.
+
+### 13. Windows refuses to restart the service during testing
+
+**Cause**
+- Stopping or replacing a Windows Service normally requires administrator privileges, and a running service may keep old binaries loaded.
+
+**Typical fix**
+- Run Services, PowerShell, or the installer elevated as Administrator.
+- Restart `PhoneUnlockService` after installing the updated Service files.
+- Close any running `PhoneUnlockSetup.exe` instance before launching the newly staged copy.
+
+### 14. Pairing pipe works locally but the phone does not complete pairing
+
+**What to check**
+- Confirm the displayed six-digit code is still within its five-minute validity window.
+- Confirm the Android app uses the same relay URL and pairing code.
+- Verify the service is connected to the relay before opening the pairing window.
+- Remove stale pairing data only when testing a clean pairing flow; do not delete the DPAPI credential store casually.
+
+**Typical fix**
+- Generate a fresh code and complete pairing before the window expires.
+- Check service logs for relay authentication errors or `401 Unauthorized` responses.
+- Ensure only one active service instance is using the PC identity.
 
 ---
 
